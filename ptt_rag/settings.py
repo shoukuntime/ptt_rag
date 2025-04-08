@@ -39,8 +39,8 @@ INSTALLED_APPS = [
     'django_celery_results',
     'django_celery_beat',
     'rest_framework',
-    'article',
-    'log',
+    'article_app',
+    'log_app',
     'drf_yasg',
 ]
 
@@ -59,8 +59,8 @@ ROOT_URLCONF = 'ptt_rag.urls'
 TEMPLATES = [
     {
         'BACKEND': 'django.template.backends.django.DjangoTemplates',
-        'DIRS': [BASE_DIR / "article/templates",
-                 BASE_DIR / "log/templates", ],
+        'DIRS': [BASE_DIR / "article_app/templates",
+                 BASE_DIR / "log_app/templates", ],
         'APP_DIRS': True,
         'OPTIONS': {
             'context_processors': [

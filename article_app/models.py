@@ -2,7 +2,7 @@ from django.db import models
 
 
 class Article(models.Model):
-    kanban = models.ForeignKey('Kanban', on_delete=models.CASCADE)
+    board = models.ForeignKey('Board', on_delete=models.CASCADE)
     title = models.CharField(max_length=255)
     author = models.ForeignKey('Author', on_delete=models.CASCADE)
     content = models.TextField()
@@ -13,7 +13,7 @@ class Article(models.Model):
         return self.url
 
 
-class Kanban(models.Model):
+class Board(models.Model):
     name = models.CharField(max_length=100, unique=True)
 
     def __str__(self):

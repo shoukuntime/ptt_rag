@@ -47,7 +47,7 @@ schema_view = get_schema_view(
 urlpatterns = [
     path('', include(router.urls)),
     path('admin/', admin.site.urls),
-    path('api/',include('article.urls')),
+    path('api/',include('article_app.urls')),
     path('api-auth/', include('rest_framework.urls', namespace='rest_framework')),
 # Swagger 文档路径
     re_path(r'^swagger/$', schema_view.with_ui('swagger', cache_timeout=0), name='swagger-ui'),

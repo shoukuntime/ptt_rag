@@ -5,7 +5,7 @@ from env_settings import settings
 from langchain_core.documents import Document
 from langchain_pinecone import PineconeVectorStore
 from ptt_rag.celery import app
-from article.models import Article
+from article_app.models import Article
 
 
 @app.task()
