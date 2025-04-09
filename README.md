@@ -36,18 +36,9 @@
 
 ![系統架構圖](https://github.com/shoukuntime/ptt_rag/blob/master/pictures/system_context_diagram.png)
 
-### 爬蟲架構圖
-
-![爬蟲架構圖](https://github.com/shoukuntime/ptt_rag/blob/master/pictures/scraping_structure.png)
-
 ### 排程流程圖
 
 ![排程架構圖](https://github.com/shoukuntime/ptt_rag/blob/master/pictures/period_send_ptt_scrape_task.png)
-
-### 檔案架構圖
-
-![檔案架構圖](https://github.com/shoukuntime/ptt_rag/blob/master/pictures/files.png)
-
 
 
 ---
@@ -84,14 +75,14 @@
 | 欄位名稱      | 資料型別      | 說明       |
 |-----------|-----------|----------|
 | id        | BIGINT    | 主鍵，自動遞增  |
-| kanban_id | BIGINT    | kanbanID |
+| board_id  | BIGINT    | boardID |
 | title     | VARCHAR   | 文章標題     |
 | author_id | BIGINT    | authorID |
-| content   | TEXT      | 文章內容     |
-| time      | TIMESTAMP | 發文時間     |
+| content   | LONGTEXT  | 文章內容     |
+| post_time | TIMESTAMP | 發文時間     |
 | url       | VARCHAR   | 文章連結     |
 
-### `kanban`
+### `board`
 
 | 欄位名稱 | 資料型別    | 說明      |
 |------|---------|---------|
@@ -105,30 +96,26 @@
 | id   | BIGINT  | 主鍵，自動遞增 |
 | name | VARCHAR | 作者名稱    |
 
-### `logs`
+### `log`
 
 | 欄位名稱       | 資料型別      | 說明      |
 |------------|-----------|---------|
 | id         | INT       | 主鍵，自動遞增 |
 | level      | VARCHAR   | 層級      |
-| message    | TEXT      | 詳細內容    |
+| type       | VARCHAR   | 流程階段    |
+| message    | LONGTEXT  | 訊息      |
+| traceback  | LONGTEXT  | 錯誤詳細內容  |
 | created_at | TIMESTAMP | 發生時間    |
 
 ### 2. Pinecone 向量格式
 
 ```json
 {
-  "id": "https://www.ptt.cc/bbs/Stock/M.1730738309.A.238.html_106",
-  // url_splitID
-  "values": [
-    0.123,
-    -0.456,
-    0.789,
-    ...
-  ],
+  "id": "0075e0e7-3305-488d-877d-b9a223d0d09e",
+  "values": [0.123, -0.456, 0.789, ...],
   "metadata": {
     "author": "rayccccc",
-    "kanban": "Stock",
+    "board": "Stock",
     "text": "推 oxboy25 : 推",
     "time": "Tue Nov 5 00:38:28 2024",
     "title": "Fw: [公告] 請留意新註冊帳號使用信件詐騙",

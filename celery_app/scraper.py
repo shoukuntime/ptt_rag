@@ -11,7 +11,6 @@ from article_app.models import Article, Board, Author
 from log_app.models import Log
 from celery_app.data_processing import store_data_in_pinecone
 from ptt_rag.celery import app
-from django.utils import timezone
 from langchain_openai import ChatOpenAI
 from langchain.chains import create_retrieval_chain
 from env_settings import settings
@@ -24,7 +23,7 @@ import traceback
 
 @app.task()
 def period_send_ptt_scrape_task():
-    board_list = ['Gossiping', 'car', 'Stock', 'LoL', 'home-sale']
+    board_list = ['Gossiping', 'NBA', 'Stock', 'LoL', 'home-sale']
     for board in board_list:
         chain(ptt_scrape.s(board), store_data_in_pinecone.s())()
 
@@ -40,21 +39,19 @@ def get_html(url: str) -> str:
     return response.text
 
 
-def get_urls_from_html_of_board(html: str, board: str) -> list:
+def get_urls_from_board_html(html: str, board: str) -> list:
     html_soup = BeautifulSoup(html, 'html.parser')
     r_ent_all = html_soup.find_all('div', class_='r-ent')
     urls = []
     for r_ent in r_ent_all:
-        try:
+        # 若無r_ent.find('a')['href']代表文章已刪除
+        if r_ent.find('a')['href']:
             url_of_article = 'https://www.ptt.cc' + r_ent.find('a')['href']
             urls.append(url_of_article)
-        except Exception as e:
-            Log.objects.create(level='ERROR', step=board, message=f'從url取得data失敗，使用LLM處理: {e}',
-                               traceback=traceback.format_exc())
     return urls
 
 
-def get_data_from_html_of_article(html: str, board: str) -> dict:
+def get_data_from_article_html(html: str, board: str) -> dict:
     html_soup = BeautifulSoup(html, 'html.parser')
     article_soup = html_soup.find('div', class_='bbs-screen bbs-content')
     title = article_soup.find_all('span', class_='article-meta-value')[2].text
@@ -62,7 +59,7 @@ def get_data_from_html_of_article(html: str, board: str) -> dict:
     time_str = article_soup.find_all('span', class_='article-meta-value')[3].text
     dt = datetime.strptime(time_str, "%a %b %d %H:%M:%S %Y")
     dt = dt.replace(tzinfo=ZoneInfo("Asia/Taipei"))
-    time = dt.strftime("%Y-%m-%d %H:%M:%S")
+    post_time = dt.strftime("%Y-%m-%d %H:%M:%S")
 
     result = []
     for element in article_soup.children:
@@ -76,27 +73,24 @@ def get_data_from_html_of_article(html: str, board: str) -> dict:
         'board': board,
         'title': title,
         'author': author,
-        'time': time,
+        'post_time': post_time,
         'content': content,
     }
     return data
 
 
-def get_data_from_url_with_llm(url: str) -> dict:
-    html = get_html(url)
-    html_soup = BeautifulSoup(html, 'html.parser')
-    article = html_soup.find('div', class_='bbs-screen bbs-content').txt
+def get_data_from_article_html_with_llm(html: str) -> dict:
     query = f"""
         以下是 HTML 內容，請幫我提取以下欄位：
         - 看板 (board)
         - 標題 (title)
         - 作者 (author)
-        - 時間 (time)
+        - 時間 (post_time)
         - 內容 (content)
 
         HTML 內容：
         ```
-        {article}
+        {html}
         ```
 
         回傳格式為 JSON，例如：
@@ -104,7 +98,7 @@ def get_data_from_url_with_llm(url: str) -> dict:
             "board": "example_board",
             "title": "example_title",
             "author": "example_author",
-            "time": "example_time",
+            "post_time": "example_time",
             "content": "example_content"
         }}
         """
@@ -118,55 +112,48 @@ def get_data_from_url_with_llm(url: str) -> dict:
     chain_result = prompt | model | parser
     data = chain_result.invoke({"query": query})
     data['author'] = data['author'].strip(')').split(' (')[0]
-    data['url'] = url
     return data
 
 
 @app.task()
 def ptt_scrape(board: str) -> list:
-    Log.objects.create(level='INFO', step=board, message=f'開始爬取 {board}')
+    Log.objects.create(level='INFO', type=board, message=f'開始爬取 {board}')
     board_url = 'https://www.ptt.cc/bbs/' + board + '/index.html'
     board_html = get_html(board_url)
-    article_urls = get_urls_from_html_of_board(board_html, board)
+    article_urls = get_urls_from_board_html(board_html, board)
     article_id_list = []
     for article_url in article_urls:
+        if Article.objects.filter(url=article_url).exists():
+            continue
+        article_html = get_html(article_url)
         try:
-            article_html = get_html(article_url)
-            article_data = get_data_from_html_of_article(article_html, board)
+            article_data = get_data_from_article_html(article_html, board)
         except Exception as e:
-            Log.objects.create(level='ERROR', step=board, message=f'從url取得data失敗，使用LLM處理: {e}',
+            Log.objects.create(level='ERROR', type=board, message=f'從url取得data失敗，使用LLM處理: {e}',
                                traceback=traceback.format_exc())
             article_data = None
         if not article_data:
             try:
-                article_data = get_data_from_url_with_llm(article_url)
+                article_data = get_data_from_article_html_with_llm(article_html)
             except Exception as e:
-                Log.objects.create(level='ERROR', step=board, message=f'LLM處理失敗: {e}',
+                Log.objects.create(level='ERROR', type=board, message=f'LLM處理失敗: {e}',
                                    traceback=traceback.format_exc())
                 continue
-        article_data['url'] = article_url
         try:
-            if not Article.objects.filter(url=article_data['url']).exists():
-                board_obj, _ = Board.objects.get_or_create(name=article_data['board'])
-                author_obj, _ = Author.objects.get_or_create(name=article_data['author'])
-                article = Article.objects.create(
-                    board=board_obj,
-                    title=article_data['title'],
-                    author=author_obj,
-                    content=article_data['content'],
-                    time=article_data['time'],
-                    url=article_data['url']
-                )
-                article_id_list.append(article.id)
-            else:
-                continue
+            board_obj, _ = Board.objects.get_or_create(name=article_data['board'])
+            author_obj, _ = Author.objects.get_or_create(name=article_data['author'])
+            article = Article.objects.create(
+                board=board_obj,
+                title=article_data['title'],
+                author=author_obj,
+                content=article_data['content'],
+                post_time=article_data['post_time'],
+                url=article_url
+            )
+            article_id_list.append(article.id)
+
         except Exception as e:
-            Log.objects.create(level='ERROR', step=board, message=f'Data插入資料庫錯誤: {e}',
+            Log.objects.create(level='ERROR', type=board, message=f'Data插入資料庫錯誤: {e}',
                                traceback=traceback.format_exc())
-    Log.objects.create(level='INFO', step=board, message=f'爬取 {board} 完成')
+    Log.objects.create(level='INFO', type=board, message=f'爬取 {board} 完成')
     return article_id_list
-
-
-if __name__ == '__main__':
-    print(get_data_from_url_with_llm('https://www.ptt.cc/bbs/NBA/M.1743558818.A.A43.html'))
-    print('執行結束')

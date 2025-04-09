@@ -24,10 +24,10 @@ def store_data_in_pinecone(article_id_list: list):
             documents.append(Document(
                 page_content=chunk,
                 metadata={
-                    "kanban": article.kanban.name,
+                    "board": article.board.name,
                     "title": article.title,
                     "author": article.author.name,
-                    "time": str(article.time),
+                    "post_time": str(article.post_time),
                     "url": article.url,
                     "chunk_index": i
                 }

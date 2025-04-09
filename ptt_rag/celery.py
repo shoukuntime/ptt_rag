@@ -17,7 +17,7 @@ app.conf.imports = [
 app.conf.beat_schedule = {
     'scrape-every-hour': {
         'task': 'celery_app.scraper.period_send_ptt_scrape_task',
-        'schedule': 60,
+        'schedule': 3600,
     }
 }
 

@@ -41,7 +41,7 @@ INSTALLED_APPS = [
     'rest_framework',
     'article_app',
     'log_app',
-    'drf_yasg',
+    'drf_spectacular',
 ]
 
 MIDDLEWARE = [
@@ -141,8 +141,5 @@ CELERY_TIMEZONE = 'Asia/Taipei'
 CELERY_BEAT_SCHEDULE = {}
 
 REST_FRAMEWORK = {
-    'DEFAULT_FILTER_BACKENDS': [
-        'django_filters.rest_framework.DjangoFilterBackend',
-        'rest_framework.filters.OrderingFilter',
-    ],
+    'DEFAULT_SCHEMA_CLASS': 'drf_spectacular.openapi.AutoSchema',
 }

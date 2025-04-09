@@ -3,6 +3,7 @@ from ptt_rag import settings as ptt_rag_settings
 
 BASE_DIR = ptt_rag_settings.BASE_DIR
 
+
 class Settings(BaseSettings):
     pinecone_api_key: str = None
     openai_api_key: str = None
@@ -12,9 +13,4 @@ class Settings(BaseSettings):
 
 
 settings = Settings()
-
-if __name__ == '__main__':
-    print(settings.pinecone_api_key)
-    print(settings.openai_api_key)
-    print(settings.pinecone_index_name)
 

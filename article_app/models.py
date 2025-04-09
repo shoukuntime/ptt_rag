@@ -6,7 +6,7 @@ class Article(models.Model):
     title = models.CharField(max_length=255)
     author = models.ForeignKey('Author', on_delete=models.CASCADE)
     content = models.TextField()
-    time = models.DateTimeField()
+    post_time = models.DateTimeField()
     url = models.URLField(max_length=255)
 
     def __str__(self):
