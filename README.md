@@ -114,6 +114,7 @@
   "id": "0075e0e7-3305-488d-877d-b9a223d0d09e",
   "values": [0.123, -0.456, 0.789, ...],
   "metadata": {
+    "article_id": 1,
     "author": "rayccccc",
     "board": "Stock",
     "text": "推 oxboy25 : 推",

@@ -81,14 +81,11 @@ WSGI_APPLICATION = 'ptt_rag.wsgi.application'
 DATABASES = {
     'default': {
         'ENGINE': 'django.db.backends.mysql',
-        'NAME': 'my_database',
-        'USER': 'root',
-        'PASSWORD': 'root',
-        'HOST': 'localhost',
+        'NAME': 'mydatabase',
+        'USER': 'shouchen61',
+        'PASSWORD': 'mypassword',
+        'HOST': 'my_mariadb',
         'PORT': '3306',
-        'OPTIONS': {
-            'init_command': "SET sql_mode='STRICT_TRANS_TABLES'"
-        }
     }
 }
 
@@ -132,8 +129,8 @@ STATIC_URL = 'static/'
 DEFAULT_AUTO_FIELD = 'django.db.models.BigAutoField'
 
 # Celery
-CELERY_BROKER_URL = "redis://127.0.0.1:6379/0"
-CELERY_RESULT_BACKEND = 'redis://localhost:6379'
+CELERY_BROKER_URL = 'redis://redis:6379/0'
+CELERY_RESULT_BACKEND = 'redis://redis:6379'
 CELERY_ACCEPT_CONTENT = ['application/json']
 CELERY_TASK_SERIALIZER = 'json'
 CELERY_RESULT_SERIALIZER = 'json'
@@ -143,3 +140,9 @@ CELERY_BEAT_SCHEDULE = {}
 REST_FRAMEWORK = {
     'DEFAULT_SCHEMA_CLASS': 'drf_spectacular.openapi.AutoSchema',
 }
+
+# SPECTACULAR_SETTINGS = {
+#     'SWAGGER_UI_SETTINGS': {
+#         'defaultModelsExpandDepth': -1,
+#     },
+# }

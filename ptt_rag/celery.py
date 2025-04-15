@@ -1,4 +1,3 @@
-from __future__ import absolute_import, unicode_literals
 from celery import Celery
 import os
 import django
@@ -6,7 +5,7 @@ import django
 os.environ.setdefault('DJANGO_SETTINGS_MODULE', 'ptt_rag.settings')
 django.setup()
 
-app = Celery("ptt_rag", broker="redis://localhost:6379/0", backend="redis://localhost:6379/0")
+app = Celery("ptt_rag", broker="redis://redis:6379/0", backend="redis://redis:6379/0")
 app.autodiscover_tasks()
 
 app.conf.imports = [

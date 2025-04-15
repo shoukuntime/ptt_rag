@@ -15,7 +15,7 @@ class QueryRequestSerializer(serializers.Serializer):
     question = serializers.CharField(help_text="查詢內容", required=True, max_length=100)
     top_k = serializers.IntegerField(help_text="控制段落的查詢數量 (預設 3)", default=3, write_only=True, max_value=10)
 
-    answer = serializers.CharField(required=False)
+    answer = serializers.CharField(required=False,read_only=True)
     related_articles = ArticleSerializer(many=True, read_only=True)
 
 

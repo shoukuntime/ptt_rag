@@ -24,6 +24,7 @@ def store_data_in_pinecone(article_id_list: list):
             documents.append(Document(
                 page_content=chunk,
                 metadata={
+                    "article_id": article.id,
                     "board": article.board.name,
                     "title": article.title,
                     "author": article.author.name,

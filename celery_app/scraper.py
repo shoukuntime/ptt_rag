@@ -45,9 +45,10 @@ def get_urls_from_board_html(html: str, board: str) -> list:
     urls = []
     for r_ent in r_ent_all:
         # 若無r_ent.find('a')['href']代表文章已刪除
-        if r_ent.find('a')['href']:
-            url_of_article = 'https://www.ptt.cc' + r_ent.find('a')['href']
-            urls.append(url_of_article)
+        if r_ent.find('a'):
+            if r_ent.find('a')['href']:
+                urls.append('https://www.ptt.cc' + r_ent.find('a')['href'])
+
     return urls
 
 
@@ -129,14 +130,14 @@ def ptt_scrape(board: str) -> list:
         try:
             article_data = get_data_from_article_html(article_html, board)
         except Exception as e:
-            Log.objects.create(level='ERROR', type=board, message=f'從url取得data失敗，使用LLM處理: {e}',
+            Log.objects.create(level='ERROR', type=board, message=f'從url:{article_url}取得data失敗，使用LLM處理: {e}',
                                traceback=traceback.format_exc())
             article_data = None
         if not article_data:
             try:
                 article_data = get_data_from_article_html_with_llm(article_html)
             except Exception as e:
-                Log.objects.create(level='ERROR', type=board, message=f'LLM處理失敗: {e}',
+                Log.objects.create(level='ERROR', type=board, message=f'{article_url}LLM處理失敗: {e}',
                                    traceback=traceback.format_exc())
                 continue
         try:
@@ -153,7 +154,7 @@ def ptt_scrape(board: str) -> list:
             article_id_list.append(article.id)
 
         except Exception as e:
-            Log.objects.create(level='ERROR', type=board, message=f'Data插入資料庫錯誤: {e}',
+            Log.objects.create(level='ERROR', type=board, message=f'{article_url}Data插入資料庫錯誤: {e}',
                                traceback=traceback.format_exc())
     Log.objects.create(level='INFO', type=board, message=f'爬取 {board} 完成')
     return article_id_list

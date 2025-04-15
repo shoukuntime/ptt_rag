@@ -1,21 +1,34 @@
 version: '3.8'
 
 services:
-  mariadb:
-    image: mariadb:latest
+  web:
+    build:
+      context: .
+      dockerfile: Dockerfile
+    env_file:
+      - .env
+    container_name: django_web
+    command: gunicorn ptt_rag.wsgi:application --bind 0.0.0.0:8000
+    volumes:
+      - .:/app
+    ports:
+      - "8000:8000"
+    depends_on:
+      - db
+      - redis
+
+  db:
+    image: mariadb:11.7.2
     container_name: my_mariadb
     restart: always
     environment:
-      MYSQL_ROOT_PASSWORD: root
       MYSQL_DATABASE: mydatabase
       MYSQL_USER: shouchen61
       MYSQL_PASSWORD: mypassword
     ports:
-      - "3306:3306"
+      - "3307:3306"
     volumes:
       - mariadb_data:/var/lib/mysql
-    networks:
-      - my_network
 
   redis:
     image: redis:latest
@@ -23,11 +36,31 @@ services:
     restart: always
     ports:
       - "6379:6379"
-    networks:
-      - my_network
+
+  celery:
+    build:
+      context: .
+      dockerfile: Dockerfile
+    container_name: celery_worker
+    command: celery -A ptt_rag worker -P eventlet -l info
+    volumes:
+      - .:/app
+    depends_on:
+      - db
+      - redis
+
+  celery-beat:
+    build:
+      context: .
+      dockerfile: Dockerfile
+    container_name: celery_beat
+    command: celery -A ptt_rag beat -l info
+    volumes:
+      - .:/app
+    depends_on:
+      - web
+      - db
+      - redis
 
 volumes:
   mariadb_data:
-
-networks:
-  my_network:

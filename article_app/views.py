@@ -154,8 +154,8 @@ class SearchAPIView(APIView):
                             status=status.HTTP_500_INTERNAL_SERVER_ERROR)
         # 從資料庫找出文章內容
         try:
-            match_urls = [match.metadata['url'] for match in top_k_results]
-            query_request_serializer.related_articles = Article.objects.filter(url__in=match_urls)
+            match_ids = [match.metadata['article_id'] for match in top_k_results]
+            query_request_serializer.related_articles = Article.objects.filter(id__in=match_ids)
             context_text = "\n".join(
                 [f"Title:{a.title} - Content:{a.content}" for a in query_request_serializer.related_articles])
         except (KeyError, TypeError) as e:
@@ -188,12 +188,14 @@ class SearchAPIView(APIView):
                                traceback=traceback.format_exc())
             return Response({"error": f"請求ChatGPT回答問題發生錯誤: {str(e)}"},
                             status=status.HTTP_500_INTERNAL_SERVER_ERROR)
-        serializer = QueryRequestSerializer(instance={
-            "question": question,
-            "answer": answer,
-            "related_articles": Article.objects.filter(url__in=match_urls).all(),
-        })
-        if not serializer.is_valid():
-            Log.objects.create(level='ERROR', type='user-search', message='輸出不合法', )
-            return Response(serializer.error_messages,status=status.HTTP_500_INTERNAL_SERVER_ERROR)
-        return Response(serializer.data, status=status.HTTP_200_OK)
+        try:
+            serializer = QueryRequestSerializer(instance={
+                "question": question,
+                "answer": answer,
+                "related_articles": Article.objects.filter(id__in=match_ids),
+            })
+            return Response(serializer.data, status=status.HTTP_200_OK)
+        except Exception as e:
+            Log.objects.create(level='ERROR', type='user-search', message=f'序列化輸出資料失敗: {e}',
+                               traceback=traceback.format_exc())
+            return Response({'error': '序列化輸出資料失敗'}, status=status.HTTP_500_INTERNAL_SERVER_ERROR)

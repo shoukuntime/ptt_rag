@@ -9,8 +9,7 @@ class Settings(BaseSettings):
     openai_api_key: str = None
     pinecone_index_name: str = 'ptt'
 
-    model_config = SettingsConfigDict(env_file=f'{BASE_DIR}\.env')
+    model_config = SettingsConfigDict(env_file=BASE_DIR / ".env")
 
 
 settings = Settings()
-
