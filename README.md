@@ -75,7 +75,7 @@
 | 欄位名稱      | 資料型別      | 說明       |
 |-----------|-----------|----------|
 | id        | BIGINT    | 主鍵，自動遞增  |
-| board_id  | BIGINT    | boardID |
+| board_id  | BIGINT    | boardID  |
 | title     | VARCHAR   | 文章標題     |
 | author_id | BIGINT    | authorID |
 | content   | LONGTEXT  | 文章內容     |
@@ -102,7 +102,7 @@
 |------------|-----------|---------|
 | id         | INT       | 主鍵，自動遞增 |
 | level      | VARCHAR   | 層級      |
-| type       | VARCHAR   | 流程階段    |
+| type       | VARCHAR   | 訊息處分類   |
 | message    | LONGTEXT  | 訊息      |
 | traceback  | LONGTEXT  | 錯誤詳細內容  |
 | created_at | TIMESTAMP | 發生時間    |
@@ -112,7 +112,12 @@
 ```json
 {
   "id": "0075e0e7-3305-488d-877d-b9a223d0d09e",
-  "values": [0.123, -0.456, 0.789, ...],
+  "values": [
+    0.123,
+    -0.456,
+    0.789,
+    ...
+  ],
   "metadata": {
     "article_id": 1,
     "author": "rayccccc",
@@ -131,67 +136,28 @@
 
 ![時程規劃圖](https://github.com/shoukuntime/ptt_rag/blob/master/pictures/schedule.png)
 
-### 第一階段（3天）：基礎架構與環境設置
+### 第一階段（4天）：基礎架構與環境設置
 
-- README 文件（初步撰寫）
-    - 撰寫專案架構、運作流程、資料格式
-    - 確保有基本的環境說明，方便後續開發
-- 部署與容器化
-    - 設置 Docker + Docker Compose
-        - MariaDB
-        - Redis
-    - 測試 MariaDB、Redis 服務是否可正常啟動與運作
-- 資料庫設計
-    - 設計 MariaDB 資料表架構
-    - 透過 Docker 啟動 MariaDB，並測試基本的資料讀寫
+ - README 文件（撰寫專案架構、運作流程、資料格式）
+ - 設置 Docker + Docker Compose ( MariaDB、Redis )
+ - 資料庫設計(MariaDB)
 
-### 第二階段（3天）：PTT 爬蟲與資料處理
+### 第二階段（6天）：PTT 爬蟲與資料處理、Celery 排程管理
 
-- PTT 爬蟲開發
-    - 開發 PTT 爬蟲程式（爬取最新文章、去重複）
-    - 爬取指定看板文章，並存入 MariaDB
-    - 設計爬蟲 log 紀錄機制，存入 MariaDB
-- 向量資料庫與 OpenAI API
-    - 申請 Pinecone 帳號，設定向量資料庫
-    - 開發 PTT 文章轉向量嵌入
-    - 申請 OpenAI API Key，設定 LangChain
+- 開發PTT爬蟲程式(爬取指定看板文章，並一併與log存入MariaDB)
+- 開發PTT文章轉向量嵌入Pinecone(使用OpenAI API、LangChain)
+- 每小時執行Celery排程
 
-### 第三階段（2天）：Celery 排程管理
+### 第三階段（4天）：Django REST API
 
-- 定期執行排程
-    - 設置 `Celery + Celery Beat`
-    - 每小時執行一次爬蟲，並存入 MariaDB
-    - 撰寫測試案例，確保定時執行功能正常
-    - 確保爬蟲與log可穩定運行至少 3 天
+- Django REST Framework（DRF）開發(建立 API、設計 Serializer)
+- 產生 Swagger API 文件
 
-### 第四階段（4天）：Django REST API
-
-- Django REST Framework（DRF）開發
-    - 建立 API：
-        - 文章數據`查詢`
-        - `篩選`條件（標題、時間、關鍵字）
-        - `增刪改`功能
-    - 設計 Serializer 進行資料驗證與請求參數處理
-- API 文件（Swagger）
-    - 使用 `drf-spectacular` 產生 OpenAPI 3.0 規格的 Swagger 文件
-    - 為所有 API 端點提供詳細描述、請求參數、回應格式
-    - 撰寫 /api/search/ API：
-        - 接受使用者的自然語言問題
-        - 使用向量檢索找出最相關文章
-        - 透過 OpenAI LLM 生成基於文章內容的回答
-
-### 第五階段（2天）：系統整合與測試
+### 第四階段（4天）：系統整合與測試、優化整個專案
 
 - 整合所有模組
-    - 爬蟲 → 存入資料庫
-    - API 查詢文章
-    - 向量檢索 → 生成回應
 - 部署與測試
-    - 使用 Docker + Docker Compose 部署整個專案
-    - 進行負載測試與錯誤修正
-- README 文件（最終補充）
-    - 新增完整的部署與執行指引
-    - 確保所有開發人員可以順利運行系統
+- README 文件（部署）
 
 ---
 
@@ -218,19 +184,36 @@
 ```json
 {
   "question": "請問最近台股有什麼影響市場的消息？",
+  "answer": "根據最近 PTT 討論，台股受到美國總統川普宣布半導體關稅的影響，...",
   "related_articles": [
     {
-      "id": 123,
-      "title": "台股暴跌原因分析",
-      "url": "https://ptt.cc/article/123"
+      "id": 164,
+      "board": "Stock",
+      "author": "enouch777",
+      "title": "[新聞] 英媒：北京握有3張底牌 抵禦川普關稅",
+      "content": "原文標題：英媒：...",
+      "post_time": "2025-04-15T17:34:11+08:00",
+      "url": "https://www.ptt.cc/bbs/Stock/M.1744709653.A.52A.html"
     },
     {
-      "id": 456,
-      "title": "市場對通膨數據的反應",
-      "url": "https://ptt.cc/article/456"
+      "id": 818,
+      "board": "Gossiping",
+      "author": "v40316",
+      "title": "[問卦] 還沒等到川普扣訊…",
+      "content": "表定今天...",
+      "post_time": "2025-04-17T02:12:22+08:00",
+      "url": "https://www.ptt.cc/bbs/Gossiping/M.1744827144.A.9BE.html"
+    },
+    {
+      "id": 833,
+      "board": "Stock",
+      "author": "NowQmmmmmmmm",
+      "title": "[情報] 聯準會主席鮑威爾今夜談話內容整理",
+      "content": "繼續無視川普！...",
+      "post_time": "2025-04-17T03:31:24+08:00",
+      "url": "https://www.ptt.cc/bbs/Stock/M.1744831887.A.C63.html"
     }
-  ],
-  "response": "根據最近 PTT 討論，市場受到國際通膨數據影響，導致台股波動..."
+  ]
 }
 ```
 
@@ -265,19 +248,23 @@
 ## 部署方式
 
 1. **運行 Docker Compose**
-   ```sh
-   docker-compose up -d
-   ```
-2. **啟動 Celery Worker**
-   ```sh
-   celery -A ptt_rag worker -P eventlet -l info
-   ```
-3. **啟動 Celery Beat（排程管理）**
-   ```sh
-   celery -A ptt_rag beat -l info
-   ```
-4. **啟動 Django 伺服器**
-   ```sh
-   python manage.py runserver
-   ```
+
+   - 在專案目錄cmd下執行:
+      ```sh
+      docker-compose up --force-recreate -d --build
+      ```
+
+2. **資料遷移** (新建立或有修改Django models才需要)
+   - 執行以下指令進入正在執行中的Docker容器裡面：
+       ```sh
+      docker exec -it django_web /bin/sh
+      ```
+
+   - 並執行以下指令以進行資料遷移：
+       ```sh
+      python manage.py makemigrations
+      ```
+     ```sh
+     python manage.py migrate
+      ```
 

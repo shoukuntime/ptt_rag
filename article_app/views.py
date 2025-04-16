@@ -5,7 +5,7 @@ from rest_framework.views import APIView
 from drf_spectacular.utils import extend_schema, OpenApiParameter, OpenApiResponse, inline_serializer
 from langchain_openai import ChatOpenAI, OpenAIEmbeddings
 from langchain_core.prompts import PromptTemplate
-from .models import Article, Board, Author
+from .models import Article
 from .serializers import ArticleSerializer, QueryRequestSerializer, ArticleListRequestSerializer
 from env_settings import settings
 from pinecone import Pinecone
@@ -15,7 +15,12 @@ from log_app.models import Log
 from langchain_pinecone import PineconeVectorStore
 
 
-def articles_filter(articles, author_name, board_name, start_date, end_date):
+def articles_filter(article_list_request_serializer):
+    articles=Article.objects.all()
+    author_name=article_list_request_serializer.validated_data.get("author_name")
+    board_name=article_list_request_serializer.validated_data.get("board_name")
+    start_date=article_list_request_serializer.validated_data.get("start_date")
+    end_date=article_list_request_serializer.validated_data.get("end_date")
     if author_name:
         articles = articles.filter(author__name=author_name)
     if board_name:
@@ -33,14 +38,14 @@ def articles_filter(articles, author_name, board_name, start_date, end_date):
 
 class ArticleListView(APIView):
     @extend_schema(
-        description="取得最新 50 篇文章，可使用 limit、offset 進行分頁，並透過作者名稱、版面、時間進行過濾。",
+        description="取得最新 50 篇文章，可使用 limit、offset 進行分頁，可使用作者名稱、版面、時間範圍進行過濾。",
         parameters=[
             OpenApiParameter("limit", int, OpenApiParameter.QUERY, description="每頁返回的筆數 (預設 50)"),
             OpenApiParameter("offset", int, OpenApiParameter.QUERY, description="從第幾筆開始 (預設 0)"),
             OpenApiParameter("author_name", str, OpenApiParameter.QUERY, description="篩選特定發文者的文章"),
             OpenApiParameter("board_name", str, OpenApiParameter.QUERY, description="篩選特定版面的文章"),
-            OpenApiParameter("start_date", str, OpenApiParameter.QUERY, description="起始日期 (YYYY-MM-DD)", ),
-            OpenApiParameter("end_date", str, OpenApiParameter.QUERY, description="結束日期 (YYYY-MM-DD)", ),
+            OpenApiParameter("start_date", str, OpenApiParameter.QUERY, description="篩選起始日期 (YYYY-MM-DD)", ),
+            OpenApiParameter("end_date", str, OpenApiParameter.QUERY, description="篩選結束日期 (YYYY-MM-DD)", ),
         ],
         responses={
             200: OpenApiResponse(
@@ -62,13 +67,7 @@ class ArticleListView(APIView):
             Log.objects.create(level='ERROR', type='user-posts', message='查詢參數不合法',
                                traceback=traceback.format_exc())
             return Response(article_list_request_serializer.errors, status=status.HTTP_400_BAD_REQUEST)
-        articles = articles_filter(
-            Article.objects.all(),
-            article_list_request_serializer.validated_data.get("author_name"),
-            article_list_request_serializer.validated_data.get("board_name"),
-            article_list_request_serializer.validated_data.get("start_date"),
-            article_list_request_serializer.validated_data.get("end_date")
-        )
+        articles = articles_filter(article_list_request_serializer)
         paginator = LimitOffsetPagination()
         paginator.default_limit = 50
         paginated_queryset = paginator.paginate_queryset(articles.order_by('id'), request)
@@ -101,8 +100,8 @@ class ArticleStatisticsView(APIView):
         parameters=[
             OpenApiParameter("author_name", str, OpenApiParameter.QUERY, description="篩選特定發文者的文章"),
             OpenApiParameter("board_name", str, OpenApiParameter.QUERY, description="篩選特定版面的文章"),
-            OpenApiParameter("start_date", str, OpenApiParameter.QUERY, description="起始日期 (YYYY-MM-DD)", ),
-            OpenApiParameter("end_date", str, OpenApiParameter.QUERY, description="結束日期 (YYYY-MM-DD)", ),
+            OpenApiParameter("start_date", str, OpenApiParameter.QUERY, description="篩選起始日期 (YYYY-MM-DD)", ),
+            OpenApiParameter("end_date", str, OpenApiParameter.QUERY, description="篩選結束日期 (YYYY-MM-DD)", ),
         ],
         responses={
             200: OpenApiResponse(response={"type": "object", "properties": {"total_articles": {"type": "integer"}}}),
@@ -114,13 +113,7 @@ class ArticleStatisticsView(APIView):
         if not article_list_request_serializer.is_valid():
             Log.objects.create(level='ERROR', type='user-posts', message='查詢參數不合法',)
             return Response(article_list_request_serializer.errors, status=status.HTTP_400_BAD_REQUEST)
-        articles = articles_filter(
-            Article.objects.all(),
-            article_list_request_serializer.validated_data.get("author_name"),
-            article_list_request_serializer.validated_data.get("board_name"),
-            article_list_request_serializer.validated_data.get("start_date"),
-            article_list_request_serializer.validated_data.get("end_date")
-        )
+        articles = articles_filter(article_list_request_serializer)
         total_articles = articles.count()
         return Response({"total_articles": total_articles})
 
@@ -176,12 +169,7 @@ class SearchAPIView(APIView):
                 "根據最近 PTT 討論，..."
                 """
             )
-            prompt = PromptTemplate(
-                template="Answer the user query.\n{format_instructions}\n{query}\n",
-                input_variables=["query"],
-                partial_variables={"format_instructions": "請以純文字形式回答"},
-            )
-            chain = ptt_template | prompt | model
+            chain = ptt_template| model
             answer = chain.invoke({"context_text": context_text, "question": question}).content
         except Exception as e:
             Log.objects.create(level='ERROR', type='user-search', message=f'請求ChatGPT回答發生錯誤: {e}',

@@ -48,7 +48,6 @@ def get_urls_from_board_html(html: str, board: str) -> list:
         if r_ent.find('a'):
             if r_ent.find('a')['href']:
                 urls.append('https://www.ptt.cc' + r_ent.find('a')['href'])
-
     return urls
 
 
@@ -118,7 +117,7 @@ def get_data_from_article_html_with_llm(html: str) -> dict:
 
 @app.task()
 def ptt_scrape(board: str) -> list:
-    Log.objects.create(level='INFO', type=board, message=f'開始爬取 {board}')
+    Log.objects.create(level='INFO', type=f'scrape-{board}', message=f'開始爬取 {board}')
     board_url = 'https://www.ptt.cc/bbs/' + board + '/index.html'
     board_html = get_html(board_url)
     article_urls = get_urls_from_board_html(board_html, board)
@@ -130,14 +129,14 @@ def ptt_scrape(board: str) -> list:
         try:
             article_data = get_data_from_article_html(article_html, board)
         except Exception as e:
-            Log.objects.create(level='ERROR', type=board, message=f'從url:{article_url}取得data失敗，使用LLM處理: {e}',
+            Log.objects.create(level='ERROR', type=f'scrape-{board}', message=f'從url:{article_url}取得data失敗，使用LLM處理: {e}',
                                traceback=traceback.format_exc())
             article_data = None
         if not article_data:
             try:
                 article_data = get_data_from_article_html_with_llm(article_html)
             except Exception as e:
-                Log.objects.create(level='ERROR', type=board, message=f'{article_url}LLM處理失敗: {e}',
+                Log.objects.create(level='ERROR', type=f'scrape-{board}', message=f'{article_url}LLM處理失敗: {e}',
                                    traceback=traceback.format_exc())
                 continue
         try:
@@ -152,9 +151,8 @@ def ptt_scrape(board: str) -> list:
                 url=article_url
             )
             article_id_list.append(article.id)
-
         except Exception as e:
-            Log.objects.create(level='ERROR', type=board, message=f'{article_url}Data插入資料庫錯誤: {e}',
+            Log.objects.create(level='ERROR', type=f'scrape-{board}', message=f'{article_url}Data插入資料庫錯誤: {e}',
                                traceback=traceback.format_exc())
-    Log.objects.create(level='INFO', type=board, message=f'爬取 {board} 完成')
+    Log.objects.create(level='INFO', type=f'scrape-{board}', message=f'爬取 {board} 完成')
     return article_id_list

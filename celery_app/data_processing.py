@@ -17,8 +17,8 @@ def store_data_in_pinecone(article_id_list: list):
         embedding=OpenAIEmbeddings(api_key=settings.openai_api_key)
     )
     documents = []
+    text_splitter = RecursiveCharacterTextSplitter(chunk_size=100, chunk_overlap=20)
     for article in Article.objects.filter(id__in=article_id_list).all():
-        text_splitter = RecursiveCharacterTextSplitter(chunk_size=100, chunk_overlap=20)
         chunks = text_splitter.split_text(article.content)
         for i, chunk in enumerate(chunks):
             documents.append(Document(
