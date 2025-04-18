@@ -67,7 +67,7 @@ def get_data_from_article_html(html: str, board: str) -> dict:
             text = element.get_text(strip=True) if element.name == "a" else str(element).strip()
             if text:
                 result.append(text)
-    content = "\n".join(result)
+    content = "\n".join(result).strip('-')
 
     data = {
         'board': board,

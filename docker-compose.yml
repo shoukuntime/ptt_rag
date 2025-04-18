@@ -14,21 +14,19 @@ services:
     ports:
       - "8000:8000"
     depends_on:
-      - db
+      - mariadb
       - redis
 
-  db:
+  mariadb:
     image: mariadb:11.7.2
     container_name: my_mariadb
     restart: always
-    environment:
-      MYSQL_DATABASE: mydatabase
-      MYSQL_USER: shouchen61
-      MYSQL_PASSWORD: mypassword
+    env_file:
+      - .env
     ports:
       - "3307:3306"
     volumes:
-      - mariadb_data:/var/lib/mysql
+      - ./mariadb_data:/var/lib/mysql
 
   redis:
     image: redis:latest
@@ -46,7 +44,8 @@ services:
     volumes:
       - .:/app
     depends_on:
-      - db
+      - web
+      - mariadb
       - redis
 
   celery-beat:
@@ -59,8 +58,5 @@ services:
       - .:/app
     depends_on:
       - web
-      - db
+      - mariadb
       - redis
-
-volumes:
-  mariadb_data:
