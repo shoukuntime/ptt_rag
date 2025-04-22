@@ -121,6 +121,7 @@ class ArticleStatisticsView(APIView):
 class SearchAPIView(APIView):
     @extend_schema(
         methods=("POST",),
+        description="輸入question(問題)與top_k(想查詢的文章片段數)，藉由LLM與向量資料庫得到question、answer(相關回答)、related_articles(相關文章)。",
         request=QueryRequestSerializer,
         responses=QueryRequestSerializer
     )
@@ -136,21 +137,31 @@ class SearchAPIView(APIView):
             vector_store = PineconeVectorStore(
                 index=Pinecone(
                     api_key=settings.pinecone_api_key
-                ).Index(settings.pinecone_index_name),
+                ).Index('ptt'),
                 embedding=OpenAIEmbeddings(api_key=settings.openai_api_key)
             )
-            top_k_results = vector_store.similarity_search(question, k=top_k, )
+            top_k_results = vector_store.similarity_search_with_score(question, k=top_k, )
         except Exception as e:
             Log.objects.create(level='ERROR', type='user-search', message=f'查詢Pinecone embeddings內容發生錯誤: {e}',
                                traceback=traceback.format_exc())
             return Response({"error": f"查詢Pinecone embeddings內容發生錯誤: {str(e)}"},
                             status=status.HTTP_500_INTERNAL_SERVER_ERROR)
-        # 從資料庫找出文章內容
+        # # Test
+        # test_ids = [match[0].id for match in top_k_results]
+        # test_score=[match[1] for match in top_k_results]
+        # return Response({"test_ids": test_ids,'test_score':test_score})
+        # # ---
+        # 從資料庫找出文章內容並合併
         try:
-            match_ids = [match.metadata['article_id'] for match in top_k_results]
+            match_ids = [match[0].metadata['article_id'] for match in top_k_results]
             query_request_serializer.related_articles = Article.objects.filter(id__in=match_ids)
             context_text = "\n".join(
                 [f"Title:{a.title} - Content:{a.content}" for a in query_request_serializer.related_articles])
+            if len(context_text)>128000:
+                Log.objects.create(level='ERROR', type='user-search', message='回傳文章總字數過長，請嘗試減少top_k')
+                return Response(
+                    {"error": "回傳文章總字數過長，請嘗試減少top_k"},
+                    status=status.HTTP_400_BAD_REQUEST)
         except (KeyError, TypeError) as e:
             Log.objects.create(level='ERROR', type='user-search', message=f'從資料庫找出文章內容發生錯誤: {e}',
                                traceback=traceback.format_exc())

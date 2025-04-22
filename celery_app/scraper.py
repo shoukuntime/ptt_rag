@@ -142,14 +142,19 @@ def ptt_scrape(board: str) -> list:
         try:
             board_obj, _ = Board.objects.get_or_create(name=article_data['board'])
             author_obj, _ = Author.objects.get_or_create(name=article_data['author'])
-            article = Article.objects.create(
-                board=board_obj,
-                title=article_data['title'],
-                author=author_obj,
-                content=article_data['content'],
-                post_time=article_data['post_time'],
-                url=article_url
-            )
+            if len(article_data['content'])<=30000:
+                article = Article.objects.create(
+                    board=board_obj,
+                    title=article_data['title'],
+                    author=author_obj,
+                    content=article_data['content'],
+                    post_time=article_data['post_time'],
+                    url=article_url
+                )
+            else:
+                Log.objects.create(level='INFO', type=f'scrape-{board}',
+                                   message=f'文章內容過長,url:{article_url}')
+                continue
             article_id_list.append(article.id)
         except Exception as e:
             Log.objects.create(level='ERROR', type=f'scrape-{board}', message=f'{article_url}Data插入資料庫錯誤: {e}',

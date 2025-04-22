@@ -9,6 +9,7 @@
 - [API設計](#API設計)
 - [開發環境](#開發環境)
 - [部署方式](#部署方式)
+- [觀看簡報](https://www.canva.com/design/DAGkAhFAEJo/7AMY_yvAVuhze7Bd8PFGMg/edit?utm_content=DAGkAhFAEJo&utm_campaign=designshare&utm_medium=link2&utm_source=sharebutton)
 
 ---
 
@@ -36,10 +37,11 @@
 
 ![系統架構圖](https://github.com/shoukuntime/ptt_rag/blob/master/pictures/system_context_diagram.png)
 
-### 排程流程圖
+### 流程圖
 
-![排程架構圖](https://github.com/shoukuntime/ptt_rag/blob/master/pictures/period_send_ptt_scrape_task.png)
-
+![排程流程圖](https://github.com/shoukuntime/ptt_rag/blob/master/pictures/period_send_ptt_scrape_task.png)
+![爬蟲流程圖](https://github.com/shoukuntime/ptt_rag/blob/master/pictures/ptt_scrape.png)
+![向量存入流程圖](https://github.com/shoukuntime/ptt_rag/blob/master/pictures/store_data_in_pinecone.png)
 
 ---
 
@@ -72,40 +74,40 @@
 
 ### `article`
 
-| 欄位名稱      | 資料型別      | 說明       |
-|-----------|-----------|----------|
-| id        | BIGINT    | 主鍵，自動遞增  |
-| board_id  | BIGINT    | boardID  |
-| title     | VARCHAR   | 文章標題     |
-| author_id | BIGINT    | authorID |
-| content   | LONGTEXT  | 文章內容     |
-| post_time | TIMESTAMP | 發文時間     |
-| url       | VARCHAR   | 文章連結     |
+| 欄位名稱      | 資料型別      | 長度  | 說明       |
+|-----------|-----------|-----|----------|
+| id        | BIGINT    | 20  | 主鍵，自動遞增  |
+| board_id  | BIGINT    | 20  | boardID  |
+| title     | VARCHAR   | 255 | 文章標題     |
+| author_id | BIGINT    | 20  | authorID |
+| content   | LONGTEXT  | X   | 文章內容     |
+| post_time | TIMESTAMP | 6   | 發文時間     |
+| url       | VARCHAR   | 255 | 文章連結     |
 
 ### `board`
 
-| 欄位名稱 | 資料型別    | 說明      |
-|------|---------|---------|
-| id   | BIGINT  | 主鍵，自動遞增 |
-| name | VARCHAR | 看板名稱    |
+| 欄位名稱 | 資料型別    | 長度  | 說明      |
+|------|---------|-----|---------|
+| id   | BIGINT  | 20  | 主鍵，自動遞增 |
+| name | VARCHAR | 100 | 看板名稱    |
 
 ### `author`
 
-| 欄位名稱 | 資料型別    | 說明      |
-|------|---------|---------|
-| id   | BIGINT  | 主鍵，自動遞增 |
-| name | VARCHAR | 作者名稱    |
+| 欄位名稱 | 資料型別    | 長度  | 說明      |
+|------|---------|-----|---------|
+| id   | BIGINT  | 20  | 主鍵，自動遞增 |
+| name | VARCHAR | 100 | 作者名稱    |
 
 ### `log`
 
-| 欄位名稱       | 資料型別      | 說明      |
-|------------|-----------|---------|
-| id         | INT       | 主鍵，自動遞增 |
-| level      | VARCHAR   | 層級      |
-| type       | VARCHAR   | 訊息處分類   |
-| message    | LONGTEXT  | 訊息      |
-| traceback  | LONGTEXT  | 錯誤詳細內容  |
-| created_at | TIMESTAMP | 發生時間    |
+| 欄位名稱       | 資料型別      | 長度  | 說明      |
+|------------|-----------|-----|---------|
+| id         | INT       | 20  | 主鍵，自動遞增 |
+| level      | VARCHAR   | 100 | 層級      |
+| type       | VARCHAR   | 100 | 訊息處分類   |
+| message    | LONGTEXT  | X   | 訊息      |
+| traceback  | LONGTEXT  | X   | 錯誤詳細內容  |
+| created_at | TIMESTAMP | 6   | 發生時間    |
 
 ### 2. Pinecone 向量格式
 
@@ -136,11 +138,11 @@
 
 ![時程規劃圖](https://github.com/shoukuntime/ptt_rag/blob/master/pictures/schedule.png)
 
-### 第一階段（4天）：基礎架構與環境設置
+### 第一階段（3天）：基礎架構與環境設置
 
- - README 文件（撰寫專案架構、運作流程、資料格式）
- - 設置 Docker + Docker Compose ( MariaDB、Redis )
- - 資料庫設計(MariaDB)
+- README 文件（撰寫專案架構、運作流程、資料格式）
+- 設置 Docker + Docker Compose ( MariaDB、Redis )
+- 資料庫設計(MariaDB)
 
 ### 第二階段（6天）：PTT 爬蟲與資料處理、Celery 排程管理
 
@@ -175,7 +177,8 @@
 
 ```json
 {
-  "query": "請問最近台股有什麼影響市場的消息？"
+  "question": "請問最近台股有什麼影響市場的消息？",
+  "top_k": 3
 }
 ```
 
@@ -240,7 +243,6 @@
 
 ### 開發工具
 
-- Napkin AI（流程圖與架構設計）
 - Docker Compose（環境部署）
 
 ---
@@ -249,22 +251,22 @@
 
 1. **運行 Docker Compose**
 
-   - 在專案目錄cmd下執行:
-      ```sh
-      docker-compose up --force-recreate -d --build
-      ```
+    - 在專案目錄cmd下執行:
+       ```sh
+       docker-compose up --force-recreate -d --build
+       ```
 
 2. **資料遷移** (新建立或有修改Django models才需要)
-   - 執行以下指令進入正在執行中的Docker容器裡面：
-       ```sh
-      docker exec -it django_web /bin/sh
-      ```
+    - 執行以下指令進入正在執行中的Docker容器裡面：
+        ```sh
+       docker exec -it django_web /bin/sh
+       ```
 
-   - 並執行以下指令以進行資料遷移：
-       ```sh
-      python manage.py makemigrations
-      ```
-     ```sh
-     python manage.py migrate
-      ```
+    - 並執行以下指令以進行資料遷移：
+        ```sh
+       python manage.py makemigrations
+       ```
+      ```sh
+      python manage.py migrate
+       ```
 

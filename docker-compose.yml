@@ -44,7 +44,6 @@ services:
     volumes:
       - .:/app
     depends_on:
-      - web
       - mariadb
       - redis
 
@@ -57,6 +56,5 @@ services:
     volumes:
       - .:/app
     depends_on:
-      - web
       - mariadb
       - redis
