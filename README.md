@@ -2,6 +2,7 @@
 
 ## 目錄
 
+
 - [專案介紹](#專案介紹)
 - [專案架構](#專案架構)
 - [運作流程](#運作流程)
@@ -9,6 +10,10 @@
 - [API設計](#API設計)
 - [開發環境](#開發環境)
 - [部署方式](#部署方式)
+
+## 相關連結
+
+- [專案題目](https://hackmd.io/@nickchen1998/SyOzSDW2kl)
 - [觀看簡報](https://www.canva.com/design/DAGkAhFAEJo/7AMY_yvAVuhze7Bd8PFGMg/edit?utm_content=DAGkAhFAEJo&utm_campaign=designshare&utm_medium=link2&utm_source=sharebutton)
 
 ---
@@ -50,7 +55,7 @@
 1. **資料爬取**
     - 每小時自動執行定期執行爬蟲，擷取 PTT 文章內容。板面如下:
         1. 八卦: https://www.ptt.cc/bbs/Gossiping/index.html
-        2. 汽車: https://www.ptt.cc/bbs/car/index.html
+        2. NBA: https://www.ptt.cc/bbs/NBA/index.html
         3. 股票: https://www.ptt.cc/bbs/Stock/index.html
         4. LoL: https://www.ptt.cc/bbs/LoL/index.html
         5. 房屋: https://www.ptt.cc/bbs/home-sale/index.html
@@ -102,7 +107,7 @@
 
 | 欄位名稱       | 資料型別      | 長度  | 說明      |
 |------------|-----------|-----|---------|
-| id         | INT       | 20  | 主鍵，自動遞增 |
+| id         | BIGINT    | 20  | 主鍵，自動遞增 |
 | level      | VARCHAR   | 100 | 層級      |
 | type       | VARCHAR   | 100 | 訊息處分類   |
 | message    | LONGTEXT  | X   | 訊息      |
@@ -113,22 +118,22 @@
 
 ```json
 {
-  "id": "0075e0e7-3305-488d-877d-b9a223d0d09e",
-  "values": [
-    0.123,
-    -0.456,
-    0.789,
-    ...
-  ],
-  "metadata": {
-    "article_id": 1,
-    "author": "rayccccc",
-    "board": "Stock",
-    "text": "推 oxboy25 : 推",
-    "time": "Tue Nov 5 00:38:28 2024",
-    "title": "Fw: [公告] 請留意新註冊帳號使用信件詐騙",
-    "url": "https://www.ptt.cc/bbs/Stock/M.1730738309.A.238.html"
-  }
+   "id": "0075e0e7-3305-488d-877d-b9a223d0d09e",
+   "values": [
+      0.123,
+      -0.456,
+      0.789,
+      ...
+   ],
+   "metadata": {
+      "article_id": 1,
+      "author": "rayccccc",
+      "board": "Stock",
+      "text": "推 oxboy25 : 推",
+      "time": "Tue Nov 5 00:38:28 2024",
+      "title": "Fw: [公告] 請留意新註冊帳號使用信件詐騙",
+      "url": "https://www.ptt.cc/bbs/Stock/M.1730738309.A.238.html"
+   }
 }
 ```
 
@@ -249,14 +254,20 @@
 
 ## 部署方式
 
-1. **運行 Docker Compose**
+1. 開啟 **Docker Desktop**
+
+2. **運行 Docker Compose**
 
     - 在專案目錄cmd下執行:
        ```sh
+       docker-compose up -d --build
+       ```
+    - 若非第一次執行可執行:
+      ```sh
        docker-compose up --force-recreate -d --build
        ```
 
-2. **資料遷移** (新建立或有修改Django models才需要)
+3. **資料遷移** (新建立或有修改Django models才需要)
     - 執行以下指令進入正在執行中的Docker容器裡面：
         ```sh
        docker exec -it django_web /bin/sh

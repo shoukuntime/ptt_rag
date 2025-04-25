@@ -2,25 +2,25 @@ from datetime import datetime, time
 from rest_framework import status, serializers
 from rest_framework.response import Response
 from rest_framework.views import APIView
+from rest_framework.pagination import LimitOffsetPagination
 from drf_spectacular.utils import extend_schema, OpenApiParameter, OpenApiResponse, inline_serializer
 from langchain_openai import ChatOpenAI, OpenAIEmbeddings
 from langchain_core.prompts import PromptTemplate
+from langchain_pinecone import PineconeVectorStore
 from .models import Article
 from .serializers import ArticleSerializer, QueryRequestSerializer, ArticleListRequestSerializer
 from env_settings import settings
 from pinecone import Pinecone
-from rest_framework.pagination import LimitOffsetPagination
 import traceback
 from log_app.models import Log
-from langchain_pinecone import PineconeVectorStore
 
 
 def articles_filter(article_list_request_serializer):
-    articles=Article.objects.all()
-    author_name=article_list_request_serializer.validated_data.get("author_name")
-    board_name=article_list_request_serializer.validated_data.get("board_name")
-    start_date=article_list_request_serializer.validated_data.get("start_date")
-    end_date=article_list_request_serializer.validated_data.get("end_date")
+    articles = Article.objects.all()
+    author_name = article_list_request_serializer.validated_data.get("author_name")
+    board_name = article_list_request_serializer.validated_data.get("board_name")
+    start_date = article_list_request_serializer.validated_data.get("start_date")
+    end_date = article_list_request_serializer.validated_data.get("end_date")
     if author_name:
         articles = articles.filter(author__name=author_name)
     if board_name:
@@ -82,8 +82,8 @@ class ArticleDetailView(APIView):
                    404: OpenApiResponse(response={"type": "object", "properties": {"error": {"type": "string"}}})}
     )
     def get(self, request, pk):
-        if pk<=0:
-            Log.objects.create(level='ERROR', type='user-posts_id', message='文章ID須為正數',)
+        if pk <= 0:
+            Log.objects.create(level='ERROR', type='user-posts_id', message='文章ID須為正數', )
             return Response({"error": "文章ID須為正數"}, status=status.HTTP_404_NOT_FOUND)
         try:
             articles = Article.objects.get(id=pk)
@@ -111,7 +111,7 @@ class ArticleStatisticsView(APIView):
     def get(self, request):
         article_list_request_serializer = ArticleListRequestSerializer(data=request.query_params)
         if not article_list_request_serializer.is_valid():
-            Log.objects.create(level='ERROR', type='user-posts', message='查詢參數不合法',)
+            Log.objects.create(level='ERROR', type='user-posts', message='查詢參數不合法', )
             return Response(article_list_request_serializer.errors, status=status.HTTP_400_BAD_REQUEST)
         articles = articles_filter(article_list_request_serializer)
         total_articles = articles.count()
@@ -128,7 +128,7 @@ class SearchAPIView(APIView):
     def post(self, request):
         query_request_serializer = QueryRequestSerializer(data=request.data)
         if not query_request_serializer.is_valid():
-            Log.objects.create(level='ERROR', type='user-search', message='查詢參數不合法',)
+            Log.objects.create(level='ERROR', type='user-search', message='查詢參數不合法', )
             return Response(query_request_serializer.errors, status=status.HTTP_400_BAD_REQUEST)
         question = query_request_serializer.validated_data.get("question")
         top_k = query_request_serializer.validated_data.get("top_k")
@@ -137,7 +137,7 @@ class SearchAPIView(APIView):
             vector_store = PineconeVectorStore(
                 index=Pinecone(
                     api_key=settings.pinecone_api_key
-                ).Index('ptt'),
+                ).Index('ptt300'),
                 embedding=OpenAIEmbeddings(api_key=settings.openai_api_key)
             )
             top_k_results = vector_store.similarity_search_with_score(question, k=top_k, )
@@ -155,9 +155,9 @@ class SearchAPIView(APIView):
         try:
             match_ids = [match[0].metadata['article_id'] for match in top_k_results]
             query_request_serializer.related_articles = Article.objects.filter(id__in=match_ids)
-            context_text = "\n".join(
+            merge_text = "\n".join(
                 [f"Title:{a.title} - Content:{a.content}" for a in query_request_serializer.related_articles])
-            if len(context_text)>128000:
+            if len(merge_text) > 128000:
                 Log.objects.create(level='ERROR', type='user-search', message='回傳文章總字數過長，請嘗試減少top_k')
                 return Response(
                     {"error": "回傳文章總字數過長，請嘗試減少top_k"},
@@ -172,16 +172,16 @@ class SearchAPIView(APIView):
         try:
             model = ChatOpenAI(model="gpt-4o", temperature=0, api_key=settings.openai_api_key)
             ptt_template = PromptTemplate(
-                input_variables=["context_text", "question"],
+                input_variables=["merge_text", "question"],
                 template="""
-                根據以下PTT的文章內容回答問題：{context_text}
+                根據以下PTT的文章內容回答問題：{merge_text}
                 問題：{question}
                 回答：回傳格式為純文字，例如：
                 "根據最近 PTT 討論，..."
                 """
             )
-            chain = ptt_template| model
-            answer = chain.invoke({"context_text": context_text, "question": question}).content
+            chain = ptt_template | model
+            answer = chain.invoke({"merge_text": merge_text, "question": question}).content
         except Exception as e:
             Log.objects.create(level='ERROR', type='user-search', message=f'請求ChatGPT回答發生錯誤: {e}',
                                traceback=traceback.format_exc())
